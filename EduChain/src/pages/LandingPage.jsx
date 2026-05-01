@@ -118,7 +118,7 @@ function PublicVerifyModal({ onClose }) {
                 ))}
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={handleCopy} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", cursor: "pointer", background: copied ? "rgba(74,222,128,0.12)" : "rgba(124,58,237,0.1)", border: `1px solid ${copied ? "rgba(74,222,128,0.3)" : "rgba(139,92,246,0.2)"}`, color: copied ? "#4ADE80" : "#A78BFA", fontWeight: 600, fontSize: 13, fontFamily: "inherit", transition: "all 0.2s" }}>
+                <button onClick={handleCopy} style={{ flex: 1, padding: "10px 0", borderRadius: 10, cursor: "pointer", background: copied ? "rgba(74,222,128,0.12)" : "rgba(124,58,237,0.1)", border: `1px solid ${copied ? "rgba(74,222,128,0.3)" : "rgba(139,92,246,0.2)"}`, color: copied ? "#4ADE80" : "#A78BFA", fontWeight: 600, fontSize: 13, fontFamily: "inherit", transition: "all 0.2s" }}>
                   {copied ? "Copied!" : "Copy ID"}
                 </button>
                 <a href={`https://explorer.solana.com/tx/${cert.txSignature}?cluster=devnet`} target="_blank" rel="noopener noreferrer"
