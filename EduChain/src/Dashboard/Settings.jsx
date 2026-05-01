@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useWallet } from "../WalletContext";
-import { useIsMobile } from "../landingPage/useIsMobile";
+import { useIsMobile } from "../LandingPage/useIsMobile";
 
 function SettingSection({ title, children }) {
   return (
