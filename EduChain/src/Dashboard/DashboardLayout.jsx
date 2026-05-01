@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useWallet } from "../WalletContext";
-import { useIsMobile } from "../LandingPage/useIsMobile";
+import { useIsMobile } from "../landingPage/useIsMobile";
 
 // Nav items per role
 const STUDENT_NAV = [

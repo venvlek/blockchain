@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useWallet } from "../WalletContext";
-import { useIsMobile } from "../LandingPage/useIsMobile";
+import { useIsMobile } from "../landingPage/useIsMobile";
 
 // Mock certs for students (replace with on-chain later)
 const MOCK_STUDENT_CERTS = {
