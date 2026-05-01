@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useWallet } from "../WalletContext";
-import { useIsMobile } from "../landing page/useIsMobile";
+import { useIsMobile } from "../landingPage/useIsMobile";
 
 // Student mock certs only — institution sees real data
 const MOCK_STUDENT_CERTS = [

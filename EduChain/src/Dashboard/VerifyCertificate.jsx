@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { useIsMobile } from "../landing page/useIsMobile";
+import { useIsMobile } from "../landingPage/useIsMobile";
 
 const MOCK_DB = {
   "EDUCHAIN-7X9K-2L8M-9P1Q": {
