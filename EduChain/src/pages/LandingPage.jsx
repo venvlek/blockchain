@@ -1,14 +1,14 @@
 import { useState, useRef } from "react";
 import { WalletProvider }  from "../WalletContext";
 import { useWallet }       from "../WalletContext";
-import { useIsMobile }     from "../landingPage/useIsMobile";
-import Navbar              from "../landingPage/Navbar";
-import HeroSection         from "../landingPage/HeroSection";
-import PlatformScene       from "../landingPage/PlatformScene";
-import StatsBar            from "../landingPage/StatsBar";
-import FeaturesPage        from "../landingPage/FeaturesPage";
-import HowItWorksPage      from "../landingPage/HowItWorksPage";
-import AboutPage           from "../landingPage/AboutPage";
+import { useIsMobile }     from "../landing page/useIsMobile";
+import Navbar              from "../landing page/Navbar";
+import HeroSection         from "../landing page/HeroSection";
+import PlatformScene       from "../landing page/PlatformScene";
+import StatsBar            from "../landing page/StatsBar";
+import FeaturesPage        from "../landing page/FeaturesPage";
+import HowItWorksPage      from "../landing page/HowItWorksPage";
+import AboutPage           from "../landing page/AboutPage";
 import Dashboard           from "../dashboard/Dashboard";
 
 // Mock DB + localStorage lookup
@@ -29,12 +29,27 @@ function PublicVerifyModal({ onClose }) {
   const handleVerify = async () => {
     if (!inputId.trim()) return;
     setLoading(true); setResult(null);
-    await new Promise(r => setTimeout(r, 800));
-    const key   = inputId.trim().toUpperCase();
+    const key = inputId.trim().toUpperCase();
+
+    try {
+      // Check blockchain first — works without login on any device
+      const { fetchCertificate } = await import("../solana.js");
+      const onChain = await fetchCertificate(key);
+      if (onChain.success) {
+        setCert(onChain);
+        setResult("valid");
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.error("Blockchain verify error:", err);
+    }
+
+    // Fallback to mock DB and localStorage
     const local = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
     const found = MOCK_DB[key] || local[key];
     if (found) { setCert(found); setResult("valid"); }
-    else       { setCert(null);  setResult("invalid"); }
+    else        { setCert(null);  setResult("invalid"); }
     setLoading(false);
   };
 
@@ -118,7 +133,7 @@ function PublicVerifyModal({ onClose }) {
                 ))}
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={handleCopy} style={{ flex: 1, padding: "10px 0", borderRadius: 10, cursor: "pointer", background: copied ? "rgba(74,222,128,0.12)" : "rgba(124,58,237,0.1)", border: `1px solid ${copied ? "rgba(74,222,128,0.3)" : "rgba(139,92,246,0.2)"}`, color: copied ? "#4ADE80" : "#A78BFA", fontWeight: 600, fontSize: 13, fontFamily: "inherit", transition: "all 0.2s" }}>
+                <button onClick={handleCopy} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", cursor: "pointer", background: copied ? "rgba(74,222,128,0.12)" : "rgba(124,58,237,0.1)", border: `1px solid ${copied ? "rgba(74,222,128,0.3)" : "rgba(139,92,246,0.2)"}`, color: copied ? "#4ADE80" : "#A78BFA", fontWeight: 600, fontSize: 13, fontFamily: "inherit", transition: "all 0.2s" }}>
                   {copied ? "Copied!" : "Copy ID"}
                 </button>
                 <a href={`https://explorer.solana.com/tx/${cert.txSignature}?cluster=devnet`} target="_blank" rel="noopener noreferrer"

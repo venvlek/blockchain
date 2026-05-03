@@ -108,17 +108,27 @@ export async function issueCertificate(wallet, {
   }
 }
 
-// ── Fetch Certificate from chain (verify)
+// ── Fetch Certificate from chain (verify) — no wallet needed
 export async function fetchCertificate(certId) {
   try {
-    // Create a read-only provider (no wallet needed for reading)
-    const provider = new AnchorProvider(
-      CONNECTION,
-      { publicKey: PublicKey.default, signTransaction: async (tx) => tx, signAllTransactions: async (txs) => txs },
-      { commitment: "confirmed" }
-    );
-    const program        = new Program(IDL, provider);
     const certificatePDA = await getCertificatePDA(certId);
+
+    // Fetch raw account data directly — no wallet needed
+    const accountInfo = await CONNECTION.getAccountInfo(certificatePDA);
+
+    if (!accountInfo) {
+      return { success: false, error: "Certificate not found on-chain" };
+    }
+
+    // Use a dummy wallet for read-only operations
+    const dummyWallet = {
+      publicKey: PublicKey.default,
+      signTransaction:    async (tx) => tx,
+      signAllTransactions: async (txs) => txs,
+    };
+
+    const provider = new AnchorProvider(CONNECTION, dummyWallet, { commitment: "confirmed" });
+    const program  = new Program(IDL, provider);
 
     const cert = await program.account.certificateAccount.fetch(certificatePDA);
 
@@ -138,7 +148,7 @@ export async function fetchCertificate(certId) {
       dateIssued:      new Date(cert.dateIssued.toNumber() * 1000).toLocaleDateString("en-US", {
         month: "long", day: "numeric", year: "numeric"
       }),
-      txSignature:     certificatePDA.toString(),
+      txSignature: certificatePDA.toString(),
     };
   } catch (err) {
     console.error("Fetch certificate failed:", err);

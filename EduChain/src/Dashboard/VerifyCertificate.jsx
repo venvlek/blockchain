@@ -161,6 +161,7 @@ function InvalidResult() {
 
 // ── QR Scanner using html5-qrcode
 function QRScanner({ onScanSuccess }) {
+  const scannerRef  = useRef(null);
   const html5QrRef  = useRef(null);
   const [scanning,  setScanning]  = useState(false);
   const [camError,  setCamError]  = useState("");
@@ -191,9 +192,9 @@ function QRScanner({ onScanSuccess }) {
           stopScanner();
           onScanSuccess(decodedText);
         },
-        () => { /* ignore frame errors */ }
+        () => {} // ignore frame errors
       );
-    } catch {
+    } catch (err) {
       setCamError("Could not access camera. Please allow camera permission and try again.");
       setScanning(false);
     }
@@ -206,7 +207,7 @@ function QRScanner({ onScanSuccess }) {
         html5QrRef.current.clear();
         html5QrRef.current = null;
       }
-    } catch { /* ignore */ }
+    } catch (_) {}
     setScanning(false);
   };
 
@@ -341,9 +342,10 @@ export default function VerifyCertificate() {
     const key = id.trim().toUpperCase();
 
     try {
-      // Check blockchain first
+      // Check blockchain first — works on any device, no login needed
       const { fetchCertificate } = await import("../solana.js");
       const onChain = await fetchCertificate(key);
+      console.log("On-chain result:", onChain);
 
       if (onChain.success) {
         setCertData(onChain);
@@ -351,7 +353,9 @@ export default function VerifyCertificate() {
         setLoading(false);
         return;
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("Blockchain verify error:", err);
+    }
 
     // Fallback: check mock DB and localStorage
     const local = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
