@@ -1,14 +1,14 @@
 import { useState, useRef } from "react";
 import { WalletProvider }  from "../WalletContext";
 import { useWallet }       from "../WalletContext";
-import { useIsMobile }     from "../landing page/useIsMobile";
-import Navbar              from "../landing page/Navbar";
-import HeroSection         from "../landing page/HeroSection";
-import PlatformScene       from "../landing page/PlatformScene";
-import StatsBar            from "../landing page/StatsBar";
-import FeaturesPage        from "../landing page/FeaturesPage";
-import HowItWorksPage      from "../landing page/HowItWorksPage";
-import AboutPage           from "../landing page/AboutPage";
+import { useIsMobile }     from "../landingPage/useIsMobile";
+import Navbar              from "../landingPage/Navbar";
+import HeroSection         from "../landingPage/HeroSection";
+import PlatformScene       from "../landingPage/PlatformScene";
+import StatsBar            from "../landingPage/StatsBar";
+import FeaturesPage        from "../landingPage/FeaturesPage";
+import HowItWorksPage      from "../landingPage/HowItWorksPage";
+import AboutPage           from "../landingPage/AboutPage";
 import Dashboard           from "../dashboard/Dashboard";
 
 // Mock DB + localStorage lookup
