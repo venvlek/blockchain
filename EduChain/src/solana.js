@@ -188,7 +188,48 @@ export async function isInstitutionRegistered(authorityPublicKey) {
   return result.success;
 }
 
-// ── Fetch all certificates issued by an institution
+// ── Fetch all certificates issued TO a student
+export async function fetchStudentCertificates(studentPublicKey) {
+  try {
+    const dummyWallet = {
+      publicKey:           PublicKey.default,
+      signTransaction:     async (tx) => tx,
+      signAllTransactions: async (txs) => txs,
+    };
+    const provider = new AnchorProvider(CONNECTION, dummyWallet, { commitment: "confirmed" });
+    const program  = new Program(IDL, provider);
+
+    // Fetch all certificate accounts
+    const allCerts = await program.account.certificateAccount.all();
+
+    // Filter by student wallet
+    const studentPubkey = new PublicKey(studentPublicKey);
+    const mine = allCerts.filter(c =>
+      c.account.studentWallet.toString() === studentPubkey.toString()
+    );
+
+    return mine.map(c => ({
+      certId:          c.account.certId,
+      studentName:     c.account.studentName,
+      studentWallet:   c.account.studentWallet.toString(),
+      course:          c.account.course,
+      institution:     c.account.institution.toString(),
+      institutionName: c.account.institutionName,
+      grade:           c.account.grade,
+      type:            c.account.certType,
+      mode:            c.account.mode,
+      category:        c.account.category,
+      description:     c.account.description,
+      dateIssued:      new Date(c.account.dateIssued.toNumber() * 1000).toLocaleDateString("en-US", {
+        month: "long", day: "numeric", year: "numeric"
+      }),
+      txSignature: c.publicKey.toString(),
+    }));
+  } catch (err) {
+    console.error("Fetch student certificates failed:", err);
+    return [];
+  }
+}
 export async function fetchInstitutionCertificates(authorityPublicKey) {
   try {
     const provider = new AnchorProvider(

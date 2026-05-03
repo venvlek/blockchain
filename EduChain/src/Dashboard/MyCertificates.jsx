@@ -280,27 +280,69 @@ export default function MyCertificates({ role }) {
   const { publicKey } = useWallet();
   const isMobile = useIsMobile();
   const [selectedCert, setSelectedCert] = useState(null);
-  const [filter, setFilter] = useState("all");
+  const [filter,       setFilter]       = useState("all");
+  const [allCerts,     setAllCerts]     = useState([]);
+  const [loading,      setLoading]      = useState(true);
 
-  // Get certificates based on role
-  const getCertificates = () => {
-    if (role === "institution") {
-      // Institution sees certificates they issued
-      const all = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
-      return Object.values(all).filter(c => c.issuedBy === publicKey);
-    } else {
-      // Student sees mock certs + any issued to their wallet
-      const all = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
-      const issuedToMe = Object.values(all).filter(c => c.studentWallet === publicKey);
-      return [...Object.values(MOCK_STUDENT_CERTS), ...issuedToMe];
-    }
-  };
+  const isInstitution = role === "institution";
 
-  const allCerts = getCertificates();
+  // Fetch certificates on mount
+  useEffect(() => {
+    const fetchCerts = async () => {
+      setLoading(true);
+      try {
+        if (isInstitution) {
+          // Institution — fetch from localStorage (they issued them)
+          const all = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
+          const mine = Object.values(all).filter(c => c.issuedBy === publicKey);
+          setAllCerts(mine);
+        } else {
+          // Student — fetch from blockchain
+          const { fetchStudentCertificates } = await import("../solana.js");
+          const onChainCerts = await fetchStudentCertificates(publicKey);
+
+          // Also get from localStorage as fallback
+          const local = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
+          const localMine = Object.values(local).filter(c => c.studentWallet === publicKey);
+
+          // Merge on-chain + local, deduplicate by certId
+          const mockCerts = Object.values(MOCK_STUDENT_CERTS);
+          const merged = [...mockCerts, ...onChainCerts, ...localMine];
+          const unique = Object.values(
+            merged.reduce((acc, c) => { acc[c.certId] = c; return acc; }, {})
+          );
+          setAllCerts(unique);
+        }
+      } catch (err) {
+        console.error("Failed to fetch certificates:", err);
+        // Fallback to localStorage
+        const all = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
+        const mine = isInstitution
+          ? Object.values(all).filter(c => c.issuedBy === publicKey)
+          : [...Object.values(MOCK_STUDENT_CERTS), ...Object.values(all).filter(c => c.studentWallet === publicKey)];
+        setAllCerts(mine);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCerts();
+  }, [publicKey, isInstitution]);
 
   // Filter options
-  const filterOptions = ["all", ...new Set(allCerts.map(c => c.type))];
+  const filterOptions = ["all", ...new Set(allCerts.map(c => c.type).filter(Boolean))];
   const filtered = filter === "all" ? allCerts : allCerts.filter(c => c.type === filter);
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
+        <div style={{ textAlign: "center" }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2.5" style={{ animation: "spin 1s linear infinite", marginBottom: 16 }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          <p style={{ color: "rgba(148,163,184,0.6)", fontSize: 14 }}>Loading certificates...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   const isInstitution = role === "institution";
 
