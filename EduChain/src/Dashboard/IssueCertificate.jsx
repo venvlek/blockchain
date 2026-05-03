@@ -107,7 +107,7 @@ function CertificatePreview({ studentName, course, institution, grade, certType,
 }
 
 export default function IssueCertificate() {
-  const { publicKey } = useWallet();
+  const { publicKey, walletAdapter } = useWallet();
   const isMobile = useIsMobile();
   const institutionName = localStorage.getItem(`educhain_inst_name_${publicKey}`) || "Your Institution";
   const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -168,35 +168,62 @@ export default function IssueCertificate() {
   const handleIssue = async () => {
     if (!validate()) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1500));
 
     const certId     = generateCertId();
-    const courseName = form.course === "Other" ? form.customCourse.trim() : form.course;
+    const courseName = mode === "Certificate"
+      ? (form.course === "Other" ? form.customCourse.trim() : form.course)
+      : form.achievementTitle.trim();
 
-    const cert = {
-      certId,
-      mode, // "Certificate" or "Achievement"
-      studentName:         form.studentName.trim(),
-      studentWallet:       form.studentWallet.trim(),
-      course:              mode === "Certificate" ? courseName : form.achievementTitle.trim(),
-      institution:         institutionName,
-      grade:               mode === "Certificate" ? form.grade.trim() : "—",
-      type:                mode === "Certificate" ? form.certType : "Achievement",
-      achievementTitle:    form.achievementTitle.trim(),
-      achievementCategory: form.achievementCategory,
-      achievementDesc:     form.achievementDesc.trim(),
-      dateIssued:          today,
-      txSignature:         `${certId.slice(0,5)}...${certId.slice(-4)}`,
-      issuedBy:            publicKey,
-      issuedAt:            Date.now(),
-    };
+    try {
+      // Call blockchain
+      const { issueCertificate } = await import("../solana.js");
+      const result = await issueCertificate(walletAdapter, {
+        certId,
+        studentWallet:  form.studentWallet.trim(),
+        studentName:    form.studentName.trim(),
+        course:         courseName,
+        grade:          mode === "Certificate" ? form.grade.trim() : "—",
+        certType:       mode === "Certificate" ? form.certType : "Achievement",
+        mode,
+        category:       form.achievementCategory,
+        description:    form.achievementDesc.trim(),
+      });
 
-    const all = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
-    all[certId] = cert;
-    localStorage.setItem("educhain_certificates", JSON.stringify(all));
+      if (!result.success) {
+        setErrors({ submit: "Transaction failed: " + result.error });
+        setLoading(false);
+        return;
+      }
 
-    setSuccess(cert);
-    setLoading(false);
+      const cert = {
+        certId,
+        mode,
+        studentName:         form.studentName.trim(),
+        studentWallet:       form.studentWallet.trim(),
+        course:              courseName,
+        institution:         institutionName,
+        grade:               mode === "Certificate" ? form.grade.trim() : "—",
+        type:                mode === "Certificate" ? form.certType : "Achievement",
+        achievementTitle:    form.achievementTitle.trim(),
+        achievementCategory: form.achievementCategory,
+        achievementDesc:     form.achievementDesc.trim(),
+        dateIssued:          today,
+        txSignature:         result.tx,
+        issuedBy:            publicKey,
+        issuedAt:            Date.now(),
+      };
+
+      // Also save to localStorage as cache for faster reads
+      const all = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
+      all[certId] = cert;
+      localStorage.setItem("educhain_certificates", JSON.stringify(all));
+
+      setSuccess(cert);
+    } catch (err) {
+      setErrors({ submit: "Error: " + err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCopyId = () => {

@@ -257,7 +257,7 @@ function InstitutionPicker({ onBack, onConfirm }) {
 }
 
 // ── Step 3: Confirm wallet address (if institution already registered)
-function AddressConfirm({ institution, onBack, onConfirmed }) {
+function AddressConfirm({ institution, onBack, onConfirmed, onError }) {
   const { publicKey } = useWallet();
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
@@ -334,9 +334,11 @@ function AddressConfirm({ institution, onBack, onConfirmed }) {
 
 // ── Root RoleSelection
 export default function RoleSelection({ onSelectRole }) {
-  const { publicKey, disconnect } = useWallet();
-  const [step, setStep]               = useState("roles");       // "roles" | "institution-pick" | "institution-confirm"
+  const { publicKey, walletAdapter, disconnect } = useWallet();
+  const [step, setStep]                 = useState("roles");
   const [selectedInst, setSelectedInst] = useState("");
+  const [registering, setRegistering]   = useState(false);
+  const [regError, setRegError]         = useState("");
 
   const handleStudent = () => {
     localStorage.setItem(`educhain_role_${publicKey}`, "student");
@@ -345,17 +347,40 @@ export default function RoleSelection({ onSelectRole }) {
 
   const handleInstitutionPick = () => setStep("institution-pick");
 
-  const handleInstitutionConfirm = (inst) => {
+  const handleInstitutionConfirm = async (inst) => {
     const existing = localStorage.getItem(`educhain_inst_${inst}`);
 
     if (!existing) {
-      // First time — register this institution to this wallet
-      localStorage.setItem(`educhain_inst_${inst}`, publicKey);
-      localStorage.setItem(`educhain_role_${publicKey}`, "institution");
-      localStorage.setItem(`educhain_inst_name_${publicKey}`, inst);
-      onSelectRole("institution");
+      // First time — register on-chain
+      setRegistering(true);
+      setRegError("");
+      try {
+        const { registerInstitution, isInstitutionRegistered } = await import("../solana.js");
+
+        // Check if already registered on-chain
+        const alreadyOnChain = await isInstitutionRegistered(publicKey);
+        if (!alreadyOnChain) {
+          const result = await registerInstitution(walletAdapter, inst);
+          if (!result.success) {
+            setRegError("Transaction failed: " + result.error);
+            setRegistering(false);
+            return;
+          }
+        }
+
+        // Save to localStorage as cache
+        localStorage.setItem(`educhain_inst_${inst}`, publicKey);
+        localStorage.setItem(`educhain_role_${publicKey}`, "institution");
+        localStorage.setItem(`educhain_inst_name_${publicKey}`, inst);
+        onSelectRole("institution");
+      } catch (err) {
+        setRegError("Failed to register: " + err.message);
+      } finally {
+        setRegistering(false);
+      }
+
     } else if (existing === publicKey) {
-      // Same wallet reconnecting — let them straight in
+      // Same wallet reconnecting
       localStorage.setItem(`educhain_role_${publicKey}`, "institution");
       localStorage.setItem(`educhain_inst_name_${publicKey}`, inst);
       onSelectRole("institution");

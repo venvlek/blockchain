@@ -35,15 +35,37 @@ const MOCK_DB = {
 // ── Valid result card
 function ValidResult({ cert, certId }) {
   const [copied, setCopied] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(certId);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setToastVisible(true);
+    setTimeout(() => {
+      setCopied(false);
+      setToastVisible(false);
+    }, 2000);
   };
 
   return (
-    <div style={{ animation: "fadeIn 0.4s ease" }}>
+    <div style={{ animation: "fadeIn 0.4s ease", position: "relative" }}>
+
+      {/* Toast notification */}
+      {toastVisible && (
+        <div style={{
+          position: "fixed", top: 24, right: 24, zIndex: 999,
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "12px 18px", borderRadius: 12,
+          background: "rgba(8,6,20,0.95)", border: "1px solid rgba(74,222,128,0.4)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          animation: "slideIn 0.3s ease",
+        }}>
+          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(74,222,128,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style={{ color: "white", fontSize: 13.5, fontWeight: 600 }}>Certificate ID copied!</span>
+        </div>
+      )}
       <div style={{
         display: "flex", alignItems: "center", gap: 12,
         padding: "14px 20px", borderRadius: 14, marginBottom: 20,
@@ -169,7 +191,7 @@ function QRScanner({ onScanSuccess }) {
           stopScanner();
           onScanSuccess(decodedText);
         },
-        () => {} // ignore frame errors
+        () => { /* ignore frame errors */ }
       );
     } catch {
       setCamError("Could not access camera. Please allow camera permission and try again.");
@@ -184,7 +206,7 @@ function QRScanner({ onScanSuccess }) {
         html5QrRef.current.clear();
         html5QrRef.current = null;
       }
-    } catch { /* scanner already stopped */ }
+    } catch { /* ignore */ }
     setScanning(false);
   };
 
@@ -316,16 +338,24 @@ export default function VerifyCertificate() {
     setLoading(true);
     setResult(null);
 
-    await new Promise(r => setTimeout(r, 800));
-
     const key = id.trim().toUpperCase();
 
-    // Check mock DB first, then localStorage issued certificates
-    const mockFound  = MOCK_DB[key];
-    const localCerts = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
-    const localFound = localCerts[key];
+    try {
+      // Check blockchain first
+      const { fetchCertificate } = await import("../solana.js");
+      const onChain = await fetchCertificate(key);
 
-    const found = mockFound || localFound;
+      if (onChain.success) {
+        setCertData(onChain);
+        setResult("valid");
+        setLoading(false);
+        return;
+      }
+    } catch { /* ignore */ }
+
+    // Fallback: check mock DB and localStorage
+    const local = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
+    const found = MOCK_DB[key] || local[key];
 
     if (found) {
       setCertData(found);
@@ -462,6 +492,7 @@ export default function VerifyCertificate() {
       <style>{`
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes fadeIn  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
       `}</style>
     </div>
   );

@@ -1,0 +1,383 @@
+{
+  "address": "AWSgwCaiwUcscBt2vHiyFrCeY8xYX7yypD9naP9wwXMu",
+  "metadata": {
+    "name": "educhain_program",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "issue_certificate",
+      "docs": [
+        "Issue a certificate or achievement on-chain"
+      ],
+      "discriminator": [
+        61,
+        197,
+        55,
+        28,
+        159,
+        18,
+        132,
+        128
+      ],
+      "accounts": [
+        {
+          "name": "certificate",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  99,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "cert_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "institution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  115,
+                  116,
+                  105,
+                  116,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "institution"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "cert_id",
+          "type": "string"
+        },
+        {
+          "name": "student_wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "student_name",
+          "type": "string"
+        },
+        {
+          "name": "course",
+          "type": "string"
+        },
+        {
+          "name": "grade",
+          "type": "string"
+        },
+        {
+          "name": "cert_type",
+          "type": "string"
+        },
+        {
+          "name": "mode",
+          "type": "string"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "register_institution",
+      "docs": [
+        "Register a wallet as an institution on EduChain"
+      ],
+      "discriminator": [
+        77,
+        234,
+        193,
+        118,
+        107,
+        20,
+        106,
+        52
+      ],
+      "accounts": [
+        {
+          "name": "institution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  110,
+                  115,
+                  116,
+                  105,
+                  116,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "CertificateAccount",
+      "discriminator": [
+        9,
+        141,
+        26,
+        14,
+        246,
+        14,
+        202,
+        133
+      ]
+    },
+    {
+      "name": "InstitutionAccount",
+      "discriminator": [
+        118,
+        156,
+        121,
+        180,
+        222,
+        68,
+        125,
+        116
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NameTooLong",
+      "msg": "Institution name is too long"
+    },
+    {
+      "code": 6001,
+      "name": "CourseTooLong",
+      "msg": "Course name is too long"
+    },
+    {
+      "code": 6002,
+      "name": "GradeTooLong",
+      "msg": "Grade is too long"
+    },
+    {
+      "code": 6003,
+      "name": "CertTypeTooLong",
+      "msg": "Certificate type is too long"
+    },
+    {
+      "code": 6004,
+      "name": "CertIdTooLong",
+      "msg": "Certificate ID is too long"
+    },
+    {
+      "code": 6005,
+      "name": "DescTooLong",
+      "msg": "Description is too long"
+    },
+    {
+      "code": 6006,
+      "name": "CategoryTooLong",
+      "msg": "Category is too long"
+    },
+    {
+      "code": 6007,
+      "name": "InstitutionNotActive",
+      "msg": "Institution is not active"
+    },
+    {
+      "code": 6008,
+      "name": "Unauthorized",
+      "msg": "Only the institution authority can issue certificates"
+    },
+    {
+      "code": 6009,
+      "name": "CertificateAlreadyExists",
+      "msg": "Certificate already exists"
+    },
+    {
+      "code": 6010,
+      "name": "InstitutionAlreadyRegistered",
+      "msg": "Institution already registered"
+    }
+  ],
+  "types": [
+    {
+      "name": "CertificateAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "cert_id",
+            "type": "string"
+          },
+          {
+            "name": "student_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "student_name",
+            "type": "string"
+          },
+          {
+            "name": "course",
+            "type": "string"
+          },
+          {
+            "name": "institution",
+            "type": "pubkey"
+          },
+          {
+            "name": "institution_name",
+            "type": "string"
+          },
+          {
+            "name": "grade",
+            "type": "string"
+          },
+          {
+            "name": "cert_type",
+            "type": "string"
+          },
+          {
+            "name": "mode",
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "date_issued",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InstitutionAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "cert_count",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "CERTIFICATE_SEED",
+      "type": "string",
+      "value": "\"certificate\""
+    },
+    {
+      "name": "INSTITUTION_SEED",
+      "type": "string",
+      "value": "\"institution\""
+    }
+  ]
+}
