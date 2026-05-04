@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWallet } from "../WalletContext";
 import { useIsMobile } from "../landingPage/useIsMobile";
 
@@ -88,7 +88,7 @@ function AchievementModal({ achievement, onClose }) {
         </div>
 
         <div style={{ padding: "0 24px 24px", display: "flex", gap: 10 }}>
-          <a href={`https://explorer.solana.com/tx/${achievement.txSignature}?cluster=devnet`} target="_blank" rel="noopener noreferrer"
+          <a href={achievement.explorerUrl || `https://explorer.solana.com/tx/${achievement.txSignature}?cluster=devnet`} target="_blank" rel="noopener noreferrer"
             style={{ flex: 1, padding: "11px 0", borderRadius: 10, textDecoration: "none", background: "rgba(124,58,237,0.08)", border: "1px solid rgba(139,92,246,0.2)", color: "#A78BFA", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             Explorer
@@ -156,18 +156,61 @@ function AchievementCard({ achievement, isMobile, onClick }) {
 export default function Achievements() {
   const { publicKey } = useWallet();
   const isMobile = useIsMobile();
-  const [selected, setSelected] = useState(null);
-  const [filter,   setFilter]   = useState("All");
+  const [selected,     setSelected]     = useState(null);
+  const [filter,       setFilter]       = useState("All");
+  const [achievements, setAchievements] = useState([]);
+  const [loading,      setLoading]      = useState(true);
 
-  // Read achievements from localStorage — any cert with mode === "Achievement"
-  const allCerts   = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
-  const achievements = Object.values(allCerts).filter(c =>
-    c.mode === "Achievement" && c.studentWallet === publicKey
-  );
+  useEffect(() => {
+    const fetchAchievements = async () => {
+      setLoading(true);
+      try {
+        // Fetch from blockchain
+        const { fetchStudentCertificates } = await import("../solana.js");
+        const onChain = await fetchStudentCertificates(publicKey);
+        const onChainAchievements = onChain.filter(c => c.mode === "Achievement");
+
+        // Also check localStorage
+        const local = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
+        const localAchievements = Object.values(local).filter(c =>
+          c.mode === "Achievement" && c.studentWallet === publicKey
+        );
+
+        // Merge and deduplicate
+        const merged = [...onChainAchievements, ...localAchievements];
+        const unique = Object.values(
+          merged.reduce((acc, c) => { acc[c.certId] = c; return acc; }, {})
+        );
+        setAchievements(unique);
+      } catch {
+        // Fallback to localStorage
+        const local = JSON.parse(localStorage.getItem("educhain_certificates") || "{}");
+        const localAchievements = Object.values(local).filter(c =>
+          c.mode === "Achievement" && c.studentWallet === publicKey
+        );
+        setAchievements(localAchievements);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAchievements();
+  }, [publicKey]);
 
   // Get unique categories from data
   const categories = ["All", ...new Set(achievements.map(a => a.achievementCategory).filter(Boolean))];
   const filtered = filter === "All" ? achievements : achievements.filter(a => a.achievementCategory === filter);
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
+        <div style={{ textAlign: "center" }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2.5" style={{ animation: "spin 1s linear infinite", marginBottom: 16 }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          <p style={{ color: "rgba(148,163,184,0.6)", fontSize: 14 }}>Loading achievements...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: isMobile ? "24px 16px" : "32px 36px", minHeight: "100%" }}>

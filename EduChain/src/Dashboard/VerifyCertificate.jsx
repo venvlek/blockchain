@@ -117,7 +117,7 @@ function ValidResult({ cert, certId }) {
         </div>
       </div>
 
-      <a href={`https://explorer.solana.com/tx/${cert.txSignature}?cluster=devnet`}
+      <a href={cert.explorerUrl || `https://explorer.solana.com/tx/${cert.txSignature}?cluster=devnet`}
         target="_blank" rel="noopener noreferrer" style={{
           marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           padding: "13px 0", borderRadius: 12, textDecoration: "none",
@@ -161,7 +161,6 @@ function InvalidResult() {
 
 // ── QR Scanner using html5-qrcode
 function QRScanner({ onScanSuccess }) {
-  const scannerRef  = useRef(null);
   const html5QrRef  = useRef(null);
   const [scanning,  setScanning]  = useState(false);
   const [camError,  setCamError]  = useState("");
@@ -194,7 +193,7 @@ function QRScanner({ onScanSuccess }) {
         },
         () => {} // ignore frame errors
       );
-    } catch (err) {
+    } catch {
       setCamError("Could not access camera. Please allow camera permission and try again.");
       setScanning(false);
     }
@@ -207,7 +206,7 @@ function QRScanner({ onScanSuccess }) {
         html5QrRef.current.clear();
         html5QrRef.current = null;
       }
-    } catch (_) {}
+    } catch { /* ignore stop errors */ }
     setScanning(false);
   };
 

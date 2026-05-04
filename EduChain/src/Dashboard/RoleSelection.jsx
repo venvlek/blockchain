@@ -257,7 +257,7 @@ function InstitutionPicker({ onBack, onConfirm }) {
 }
 
 // ── Step 3: Confirm wallet address (if institution already registered)
-function AddressConfirm({ institution, onBack, onConfirmed, onError }) {
+function AddressConfirm({ institution, onBack, onConfirmed }) {
   const { publicKey } = useWallet();
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
@@ -348,46 +348,53 @@ export default function RoleSelection({ onSelectRole }) {
   const handleInstitutionPick = () => setStep("institution-pick");
 
   const handleInstitutionConfirm = async (inst) => {
-    const existing = localStorage.getItem(`educhain_inst_${inst}`);
+    setRegistering(true);
+    setRegError("");
 
-    if (!existing) {
-      // First time — register on-chain
-      setRegistering(true);
-      setRegError("");
-      try {
-        const { registerInstitution, isInstitutionRegistered } = await import("../solana.js");
+    try {
+      const { registerInstitution, isInstitutionRegistered, fetchInstitutionByName } = await import("../solana.js");
 
-        // Check if already registered on-chain
-        const alreadyOnChain = await isInstitutionRegistered(publicKey);
-        if (!alreadyOnChain) {
-          const result = await registerInstitution(walletAdapter, inst);
-          if (!result.success) {
-            setRegError("Transaction failed: " + result.error);
-            setRegistering(false);
-            return;
-          }
+      // Check on-chain if this institution name is already taken
+      const onChainCheck = await fetchInstitutionByName(inst);
+
+      if (onChainCheck.found) {
+        if (onChainCheck.authority === publicKey) {
+          // Same wallet — let them back in
+          localStorage.setItem(`educhain_role_${publicKey}`, "institution");
+          localStorage.setItem(`educhain_inst_name_${publicKey}`, inst);
+          localStorage.setItem(`educhain_inst_${inst}`, publicKey);
+          onSelectRole("institution");
+        } else {
+          // Taken by another wallet — show confirm address step
+          setSelectedInst(inst);
+          setStep("institution-confirm");
         }
-
-        // Save to localStorage as cache
-        localStorage.setItem(`educhain_inst_${inst}`, publicKey);
-        localStorage.setItem(`educhain_role_${publicKey}`, "institution");
-        localStorage.setItem(`educhain_inst_name_${publicKey}`, inst);
-        onSelectRole("institution");
-      } catch (err) {
-        setRegError("Failed to register: " + err.message);
-      } finally {
         setRegistering(false);
+        return;
       }
 
-    } else if (existing === publicKey) {
-      // Same wallet reconnecting
+      // Not taken — check if this wallet already has an institution
+      const alreadyRegistered = await isInstitutionRegistered(publicKey);
+      if (!alreadyRegistered) {
+        // Register on-chain
+        const result = await registerInstitution(walletAdapter, inst);
+        if (!result.success) {
+          setRegError("Transaction failed: " + result.error);
+          setRegistering(false);
+          return;
+        }
+      }
+
+      // Save to localStorage as cache
+      localStorage.setItem(`educhain_inst_${inst}`, publicKey);
       localStorage.setItem(`educhain_role_${publicKey}`, "institution");
       localStorage.setItem(`educhain_inst_name_${publicKey}`, inst);
       onSelectRole("institution");
-    } else {
-      // Different wallet — needs address confirmation
-      setSelectedInst(inst);
-      setStep("institution-confirm");
+
+    } catch (err) {
+      setRegError("Failed to register: " + err.message);
+    } finally {
+      setRegistering(false);
     }
   };
 
@@ -443,6 +450,23 @@ export default function RoleSelection({ onSelectRole }) {
         )}
         {step === "institution-confirm" && (
           <AddressConfirm institution={selectedInst} onBack={() => setStep("institution-pick")} onConfirmed={handleAddressConfirmed} />
+        )}
+
+        {/* Registering overlay */}
+        {registering && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(6,4,16,0.85)", backdropFilter: "blur(8px)" }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2.5" style={{ animation: "spin 1s linear infinite", marginBottom: 16 }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            <p style={{ color: "white", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Checking blockchain...</p>
+            <p style={{ color: "rgba(148,163,184,0.6)", fontSize: 13.5 }}>Please wait while we verify institution availability</p>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+
+        {/* Registration error */}
+        {regError && (
+          <div style={{ marginTop: 16, padding: "12px 16px", borderRadius: 10, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", maxWidth: 400, width: "100%" }}>
+            <p style={{ color: "#F87171", fontSize: 13, textAlign: "center" }}>{regError}</p>
+          </div>
         )}
 
         {/* Disconnect */}

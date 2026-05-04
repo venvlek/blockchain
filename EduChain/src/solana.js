@@ -148,7 +148,8 @@ export async function fetchCertificate(certId) {
       dateIssued:      new Date(cert.dateIssued.toNumber() * 1000).toLocaleDateString("en-US", {
         month: "long", day: "numeric", year: "numeric"
       }),
-      txSignature: certificatePDA.toString(),
+      txSignature:  certificatePDA.toString(), // PDA address
+      explorerUrl:  `https://explorer.solana.com/address/${certificatePDA.toString()}?cluster=devnet`,
     };
   } catch (err) {
     console.error("Fetch certificate failed:", err);
@@ -188,6 +189,36 @@ export async function isInstitutionRegistered(authorityPublicKey) {
   return result.success;
 }
 
+// ── Check if institution NAME is already taken on-chain
+export async function fetchInstitutionByName(institutionName) {
+  try {
+    const dummyWallet = {
+      publicKey:           PublicKey.default,
+      signTransaction:     async (tx) => tx,
+      signAllTransactions: async (txs) => txs,
+    };
+    const provider = new AnchorProvider(CONNECTION, dummyWallet, { commitment: "confirmed" });
+    const program  = new Program(IDL, provider);
+
+    const allInstitutions = await program.account.institutionAccount.all();
+    const match = allInstitutions.find(i =>
+      i.account.name.toLowerCase() === institutionName.toLowerCase()
+    );
+
+    if (match) {
+      return {
+        found:     true,
+        authority: match.account.authority.toString(),
+        name:      match.account.name,
+      };
+    }
+    return { found: false };
+  } catch (err) {
+    console.error("fetchInstitutionByName failed:", err);
+    return { found: false };
+  }
+}
+
 // ── Fetch all certificates issued TO a student
 export async function fetchStudentCertificates(studentPublicKey) {
   try {
@@ -224,6 +255,7 @@ export async function fetchStudentCertificates(studentPublicKey) {
         month: "long", day: "numeric", year: "numeric"
       }),
       txSignature: c.publicKey.toString(),
+      explorerUrl: `https://explorer.solana.com/address/${c.publicKey.toString()}?cluster=devnet`,
     }));
   } catch (err) {
     console.error("Fetch student certificates failed:", err);

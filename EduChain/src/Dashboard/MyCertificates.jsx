@@ -27,23 +27,21 @@ const MOCK_STUDENT_CERTS = {
   },
 };
 
-// ── QR Code Canvas — encodes the Explorer URL
-function CertQRCode({ txSignature, certId }) {
+// ── QR Code Canvas — encodes the Certificate ID for direct verification
+function CertQRCode({ certId }) {
   const canvasRef = useRef(null);
-  // QR encodes the explorer URL so scanning opens it directly
-  const explorerUrl = `https://explorer.solana.com/tx/${txSignature}?cluster=devnet`;
 
   useEffect(() => {
     import("qrcode").then(QRCode => {
       if (canvasRef.current) {
-        QRCode.toCanvas(canvasRef.current, explorerUrl, {
+        QRCode.toCanvas(canvasRef.current, certId, {
           width: 140,
           margin: 1,
           color: { dark: "#1a1040", light: "#ffffff" },
         });
       }
     }).catch(() => {});
-  }, [explorerUrl]);
+  }, [certId]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
@@ -132,14 +130,14 @@ function CertModal({ cert, onClose }) {
             display: "flex", alignItems: "center", gap: 20,
             animation: "fadeIn 0.3s ease",
           }}>
-            <CertQRCode txSignature={cert.txSignature} certId={cert.certId} />
+            <CertQRCode certId={cert.certId} />
             <div>
               <p style={{ color: "white", fontWeight: 700, fontSize: 13.5, marginBottom: 8 }}>Scan to Verify</p>
               <p style={{ color: "rgba(148,163,184,0.65)", fontSize: 12.5, lineHeight: 1.65, marginBottom: 12 }}>
-                Scan this QR code with any phone camera to open this certificate on Solana Explorer and verify it on-chain.
+                Scan this QR code with the EduChain app to instantly verify this certificate on the Solana blockchain.
               </p>
               <div style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)" }}>
-                <p style={{ color: "#4ADE80", fontSize: 11.5, fontWeight: 600 }}>Opens Solana Explorer · Devnet</p>
+                <p style={{ color: "#4ADE80", fontSize: 11.5, fontWeight: 600 }}>Opens EduChain Verify · Solana Devnet</p>
               </div>
             </div>
           </div>
@@ -176,7 +174,7 @@ function CertModal({ cert, onClose }) {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <p style={{ color: "white", fontSize: 12.5, fontFamily: "monospace", fontWeight: 600 }}>{cert.certId}</p>
             <button onClick={() => handleCopy(cert.certId)} style={{
-              padding: "5px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+              padding: "5px 12px", borderRadius: 8, cursor: "pointer",
               background: copied ? "rgba(74,222,128,0.12)" : "rgba(124,58,237,0.12)",
               border: `1px solid ${copied ? "rgba(74,222,128,0.3)" : "rgba(139,92,246,0.25)"}`,
               color: copied ? "#4ADE80" : "#A78BFA",
@@ -190,7 +188,7 @@ function CertModal({ cert, onClose }) {
 
         {/* Actions */}
         <div style={{ padding: "0 24px 24px", display: "flex", gap: 10 }}>
-          <a href={`https://explorer.solana.com/tx/${cert.txSignature}?cluster=devnet`}
+          <a href={cert.explorerUrl || `https://explorer.solana.com/tx/${cert.txSignature}?cluster=devnet`}
             target="_blank" rel="noopener noreferrer" style={{
               flex: 1, padding: "11px 0", borderRadius: 10, textDecoration: "none",
               background: "rgba(124,58,237,0.08)", border: "1px solid rgba(139,92,246,0.2)",
@@ -344,8 +342,6 @@ export default function MyCertificates({ role }) {
     );
   }
 
-  const isInstitution = role === "institution";
-
   return (
     <div style={{ padding: isMobile ? "24px 16px" : "32px 36px", minHeight: "100%" }}>
 
@@ -382,7 +378,7 @@ export default function MyCertificates({ role }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
           {filterOptions.map((f, i) => (
             <button key={i} onClick={() => setFilter(f)} style={{
-              padding: "6px 16px", borderRadius: 999, border: "none", cursor: "pointer",
+              padding: "6px 16px", borderRadius: 999, cursor: "pointer",
               background: filter === f ? "linear-gradient(135deg, #7C3AED, #6366F1)" : "rgba(124,58,237,0.08)",
               border: filter === f ? "none" : "1px solid rgba(139,92,246,0.2)",
               color: filter === f ? "white" : "rgba(148,163,184,0.7)",
